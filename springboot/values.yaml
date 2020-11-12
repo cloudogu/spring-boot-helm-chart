@@ -1,0 +1,56 @@
+replicaCount: 1
+
+# In our pipeline the image is set after the validation, without this placeholder the validation would fail
+image:
+  name: placeholder
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+containerPort: 8080
+actuatorPort: 9080
+
+health:
+  liveness:
+    port: 9080
+    path: /actuator/health/liveness
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  readiness:
+    port: 9080
+    path: /actuator/health/readiness
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  annotations: {}
+  tls: []
+
+resources:
+  limits:
+    # Since the Spring Boot Maven Plugin builds our containers via the Java Buildpack, we need around
+    # 650 MB, otherwise the container fails to start with: "allocated memory is greater..."
+    # https://twitter.com/nebhale/status/1281646532295454720
+    # In exchange, we get the JVM set up with best practice settings in memory regions.
+    # Hopefully getting less trouble with ops.
+    # https://www.cloudfoundry.org/blog/just-released-java-buildpack-4-0/
+    # Depending on the number of classes in our apps we might have to increase this later.
+    memory: 650Mi
+  requests:
+    memory: 650Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

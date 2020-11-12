@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "springboot.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "springboot.name" . }}
+    helm.sh/chart: {{ include "springboot.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 100%
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "springboot.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "springboot.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        # For some reason the default profile that works well with docker is explicitly disabled in k8s.
+        # We use it by default and only disable it, in case of problems (which are unlikely)
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
+        # Make prometheus collect the metrics of the pods
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '{{ .Values.actuatorPort }}'
+        prometheus.io/path: '/actuator/prometheus'
+    spec:
+      containers:
+        - name: {{ include "springboot.fullname" . }}
+          image: "{{ .Values.image.name }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.health.liveness.path }}
+              port: {{ .Values.health.liveness.port }}
+            initialDelaySeconds: {{ .Values.health.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.health.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.health.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.health.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.health.readiness.path }}
+              port: {{ .Values.health.readiness.port }}
+            initialDelaySeconds: {{ .Values.health.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.health.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.health.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.health.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            # Those settings mitigate a lot of vulnerabilities
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 100000
+            runAsGroup: 100000
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              # Tmp folder used by spring to write data. We need to mount this because of "readOnlyRootFilesystem" (see above)
+              mountPath: /tmp/
+            {{- with .Values.extraVolumeMounts }}
+            {{- tpl . $ | nindent 12 }}
+            {{- end }}
+          env:
+            - name: SERVER_PORT
+              value: '{{ .Values.containerPort }}'
+            - name: MANAGEMENT_SERVER_PORT
+              value: '{{ .Values.actuatorPort }}'
+            {{- with .Values.extraEnv }}
+            {{- tpl . $ | nindent 12 }}
+            {{- end }}
+          envFrom:
+            {{- with .Values.extraEnvFrom }}
+              {{- tpl . $ | nindent 12 }}
+              {{- end }}
+      # Don't mount all kubernetes services and ports into the env. This behavior corresponds to the "docker links",
+      # which is deprecated and not used in our services. It
+      # - pollutes the env with lots of entries,
+      # - imposes the risk that applications might mistake the service env as a config parameter
+      #   (e.g. POSTGRES_SERVICE_PORT in keycloak) and
+      # - provides a convenient overview of new target for potential attackers
+      enableServiceLinks: false
+      # Don't mount k8s service account token into pod. This can be used to authenticate to the API server.
+      # It's not used by our services but might be used by potential attackers. There still is the authorization layer,
+      # but one more vulnerability or misconfiguration and the attacker might get access to the API server.
+      automountServiceAccountToken: false
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- with .Values.extraVolumes }}
+        {{- tpl . $ | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+    affinity:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+    tolerations:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: springboot
+description: A Kubernetes-Helm chart for spring boot applications
+type: application
+version: 0.1.0
