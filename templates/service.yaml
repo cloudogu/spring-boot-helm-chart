@@ -14,6 +14,9 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+      {{- if (not (empty .Values.service.nodePort)) }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
   selector:
     app.kubernetes.io/name: {{ include "springboot.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
