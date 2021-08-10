@@ -33,7 +33,7 @@ service:
   # nodePort:
 
 ingress:
-  enabled: true
+  enabled: false
   annotations: {}
   tls: []
 
