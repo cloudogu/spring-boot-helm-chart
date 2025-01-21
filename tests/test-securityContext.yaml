@@ -1,0 +1,48 @@
+suite: SecurityContext Tests
+templates:
+  - templates/deployment.yaml
+
+tests:
+  - it: should set runAsUser to null when explicitly set to null
+    set:
+      securityContext.runAsUser: null
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: null
+
+  - it: should set runAsUser to a specific value (50404) when provided
+    set:
+      securityContext.runAsUser: 50404
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 50404
+
+  - it: should default runAsUser to 100000 when not explicitly set
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 100000
+
+  - it: should set runAsGroup to null when explicitly set to null
+    set:
+      securityContext.runAsGroup: null
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsGroup
+          value: null
+
+  - it: should set runAsGroup to a specific value (50404) when provided
+    set:
+      securityContext.runAsGroup: 50404
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsGroup
+          value: 50404
+
+  - it: should default runAsGroup to 100000 when not explicitly set
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsGroup
+          value: 100000

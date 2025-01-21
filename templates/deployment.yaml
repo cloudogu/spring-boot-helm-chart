@@ -63,8 +63,8 @@ spec:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             runAsNonRoot: true
-            runAsUser: 100000
-            runAsGroup: 100000
+            runAsUser: {{- if .Values.securityContext.runAsUser | eq nil }} null{{- else }} {{ .Values.securityContext.runAsUser }}{{- end }}
+            runAsGroup: {{- if .Values.securityContext.runAsGroup | eq nil }} null{{- else }} {{ .Values.securityContext.runAsGroup }}{{- end }}
             capabilities:
               drop:
                 - ALL

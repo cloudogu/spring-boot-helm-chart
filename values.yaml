@@ -37,6 +37,10 @@ ingress:
   annotations: {}
   tls: []
 
+securityContext:
+  runAsUser: 100000
+  runAsGroup: 100000
+
 resources:
   limits:
     # Since the Spring Boot Maven Plugin builds our containers via the Java Buildpack, we need around
